@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -9,9 +10,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241218135300_AddFilmstable")]
+    partial class AddFilmstable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -87,17 +90,17 @@ namespace Backend.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "85252d1c-60f7-4ded-bc0b-98e345c021dd",
+                            Id = "10ae7d62-0bd6-4e29-bf03-4e5b75643093",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "72338661-38f5-412c-85e8-40300575667f",
+                            ConcurrencyStamp = "631be6d2-a081-4db4-8266-b2172ee25b53",
                             Email = "admin@example.com",
                             EmailConfirmed = true,
                             LockoutEnabled = false,
                             NormalizedEmail = "ADMIN@EXAMPLE.COM",
                             NormalizedUserName = "ADMIN@EXAMPLE.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEK2zpoabQbTWGivGO8gE3zD8DxH2HN7/sGnMjpYgAuIao3GGW5Xt6rMfctE1t8FUJw==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEMzETGoadWmtKAiiaVrLZWk3vZpcetfLkSZI5hNqbJ/uYZltKM3YzKaLEmii2DpGOg==",
                             PhoneNumberConfirmed = false,
-                            SecurityStamp = "b8e2f87a-20cf-4886-8490-dda1ae8a75dc",
+                            SecurityStamp = "4acf87f6-5dd6-4557-8496-93403437555a",
                             TwoFactorEnabled = false,
                             UserName = "admin@example.com"
                         });
@@ -213,8 +216,8 @@ namespace Backend.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime(6)");
+                    b.Property<int>("DateCreated")
+                        .HasColumnType("int");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -335,13 +338,13 @@ namespace Backend.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "0bd6dbbf-afcb-4018-9f98-25ca1cf2e138",
+                            Id = "f2c2f553-0810-4a5a-b753-809b2d2710c3",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         },
                         new
                         {
-                            Id = "984db43b-7e42-4965-bc88-8538cbe3733e",
+                            Id = "0922dc51-02a2-4393-8785-8b06c2af9621",
                             Name = "User",
                             NormalizedName = "USER"
                         });
@@ -432,8 +435,8 @@ namespace Backend.Migrations
                     b.HasData(
                         new
                         {
-                            UserId = "85252d1c-60f7-4ded-bc0b-98e345c021dd",
-                            RoleId = "0bd6dbbf-afcb-4018-9f98-25ca1cf2e138"
+                            UserId = "10ae7d62-0bd6-4e29-bf03-4e5b75643093",
+                            RoleId = "f2c2f553-0810-4a5a-b753-809b2d2710c3"
                         });
                 });
 

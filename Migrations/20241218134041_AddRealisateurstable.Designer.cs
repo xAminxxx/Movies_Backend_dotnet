@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -9,9 +10,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20241218134041_AddRealisateurstable")]
+    partial class AddRealisateurstable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -87,17 +90,17 @@ namespace Backend.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "85252d1c-60f7-4ded-bc0b-98e345c021dd",
+                            Id = "9c715742-e0d1-4780-a58a-e652ed16e093",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "72338661-38f5-412c-85e8-40300575667f",
+                            ConcurrencyStamp = "7443670a-a146-47ae-9acb-ceb6cbb9a7f4",
                             Email = "admin@example.com",
                             EmailConfirmed = true,
                             LockoutEnabled = false,
                             NormalizedEmail = "ADMIN@EXAMPLE.COM",
                             NormalizedUserName = "ADMIN@EXAMPLE.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEK2zpoabQbTWGivGO8gE3zD8DxH2HN7/sGnMjpYgAuIao3GGW5Xt6rMfctE1t8FUJw==",
+                            PasswordHash = "AQAAAAIAAYagAAAAED0K6kzO9zapnye6wSNMUUnndB0MmHpskKsGZOkzlgYwQApDmoZ9QUbFgBxxFXFsPg==",
                             PhoneNumberConfirmed = false,
-                            SecurityStamp = "b8e2f87a-20cf-4886-8490-dda1ae8a75dc",
+                            SecurityStamp = "886c20ba-0f05-4889-8250-920d31b94ca6",
                             TwoFactorEnabled = false,
                             UserName = "admin@example.com"
                         });
@@ -198,66 +201,6 @@ namespace Backend.Migrations
                     b.ToTable("Editeurs");
                 });
 
-            modelBuilder.Entity("Backend.Models.Film", b =>
-                {
-                    b.Property<int>("FilmID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    b.Property<int>("ActeurPID")
-                        .HasColumnType("int");
-
-                    b.Property<int>("CategorieID")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<int>("Duree")
-                        .HasColumnType("int");
-
-                    b.Property<int>("EditeurID")
-                        .HasColumnType("int");
-
-                    b.Property<int>("LangueID")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Nom")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)");
-
-                    b.Property<string>("Poster")
-                        .HasColumnType("longtext");
-
-                    b.Property<int>("RealisateurID")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.HasKey("FilmID");
-
-                    b.HasIndex("ActeurPID");
-
-                    b.HasIndex("CategorieID");
-
-                    b.HasIndex("EditeurID");
-
-                    b.HasIndex("LangueID");
-
-                    b.HasIndex("RealisateurID");
-
-                    b.ToTable("Films");
-                });
-
             modelBuilder.Entity("Backend.Models.Langue", b =>
                 {
                     b.Property<int>("LangueID")
@@ -335,13 +278,13 @@ namespace Backend.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "0bd6dbbf-afcb-4018-9f98-25ca1cf2e138",
+                            Id = "ee18b892-cfe1-42bd-a35a-22d36fa0f69b",
                             Name = "Admin",
                             NormalizedName = "ADMIN"
                         },
                         new
                         {
-                            Id = "984db43b-7e42-4965-bc88-8538cbe3733e",
+                            Id = "39efc4a5-d81e-4f69-84c6-b3e7384fc218",
                             Name = "User",
                             NormalizedName = "USER"
                         });
@@ -432,8 +375,8 @@ namespace Backend.Migrations
                     b.HasData(
                         new
                         {
-                            UserId = "85252d1c-60f7-4ded-bc0b-98e345c021dd",
-                            RoleId = "0bd6dbbf-afcb-4018-9f98-25ca1cf2e138"
+                            UserId = "9c715742-e0d1-4780-a58a-e652ed16e093",
+                            RoleId = "ee18b892-cfe1-42bd-a35a-22d36fa0f69b"
                         });
                 });
 
@@ -454,49 +397,6 @@ namespace Backend.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
-                });
-
-            modelBuilder.Entity("Backend.Models.Film", b =>
-                {
-                    b.HasOne("Backend.Models.Acteur", "ActeurP")
-                        .WithMany()
-                        .HasForeignKey("ActeurPID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Backend.Models.Category", "Categories")
-                        .WithMany()
-                        .HasForeignKey("CategorieID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Backend.Models.Editeur", "Editeur")
-                        .WithMany()
-                        .HasForeignKey("EditeurID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Backend.Models.Langue", "Langues")
-                        .WithMany()
-                        .HasForeignKey("LangueID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Backend.Models.Realisateurs", "Realisateur")
-                        .WithMany()
-                        .HasForeignKey("RealisateurID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ActeurP");
-
-                    b.Navigation("Categories");
-
-                    b.Navigation("Editeur");
-
-                    b.Navigation("Langues");
-
-                    b.Navigation("Realisateur");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
