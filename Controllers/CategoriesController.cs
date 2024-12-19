@@ -1,7 +1,9 @@
 using Backend.Models;
+using Backend.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Backend.Controllers
 {
@@ -10,26 +12,26 @@ namespace Backend.Controllers
     [Authorize]
     public class CategoryController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ICategoryRepository _categoryRepository;
 
-        public CategoryController(ApplicationDbContext context)
+        public CategoryController(ICategoryRepository categoryRepository)
         {
-            _context = context;
+            _categoryRepository = categoryRepository;
         }
 
         // GET: api/Category
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
         {
-            return await _context.Categories.ToListAsync();
+            var categories = await _categoryRepository.GetAllCategoriesAsync();
+            return Ok(categories);
         }
 
         // GET: api/Category/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Category>> GetCategory(int id)
         {
-            var category = await _context.Categories.FindAsync(id);
-
+            var category = await _categoryRepository.GetCategoryByIdAsync(id);
             if (category == null)
             {
                 return NotFound();
@@ -47,9 +49,7 @@ namespace Backend.Controllers
                 return BadRequest(ModelState);
             }
 
-            _context.Categories.Add(category);
-            await _context.SaveChangesAsync();
-
+            await _categoryRepository.AddAsync(category);
             return CreatedAtAction(nameof(GetCategory), new { id = category.CategorieID }, category);
         }
 
@@ -62,24 +62,7 @@ namespace Backend.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(category).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!CategoryExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
+            await _categoryRepository.UpdateAsync(category);
             return NoContent();
         }
 
@@ -87,21 +70,14 @@ namespace Backend.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCategory(int id)
         {
-            var category = await _context.Categories.FindAsync(id);
+            var category = await _categoryRepository.GetCategoryByIdAsync(id);
             if (category == null)
             {
                 return NotFound();
             }
 
-            _context.Categories.Remove(category);
-            await _context.SaveChangesAsync();
-
+            await _categoryRepository.DeleteAsync(id);
             return NoContent();
-        }
-
-        private bool CategoryExists(int id)
-        {
-            return _context.Categories.Any(e => e.CategorieID == id);
         }
     }
 }

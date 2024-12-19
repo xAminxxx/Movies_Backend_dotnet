@@ -1,6 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using Backend.Models;
+using Backend.Repositories;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -11,13 +13,44 @@ namespace Backend.Controllers
     [Authorize]
     public class ActeurController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IWebHostEnvironment _env;
+        private readonly IActeurRepository _acteurRepository;
 
-        public ActeurController(ApplicationDbContext context, IWebHostEnvironment env)
+        public ActeurController(IActeurRepository acteurRepository)
         {
-            _context = context;
-            _env = env;
+            _acteurRepository = acteurRepository;
+        }
+
+        // GET: api/Acteur
+        [HttpGet]
+        public async Task<IActionResult> GetAllActeurs()
+        {
+            var acteurs = await _acteurRepository.GetAllActeursAsync();
+            return Ok(acteurs);
+        }
+
+        // GET: api/Acteur/{id}
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetActeurById(int id)
+        {
+            var acteur = await _acteurRepository.GetActeurByIdAsync(id);
+            if (acteur == null)
+            {
+                return NotFound(new { message = "Acteur introuvable." });
+            }
+            return Ok(acteur);
+        }
+
+        // POST: api/Acteur
+        [HttpPost]
+        public async Task<IActionResult> AddActeur([FromBody] Acteur acteur)
+        {
+            if (acteur == null)
+            {
+                return BadRequest(new { message = "Les données de l'acteur sont invalides." });
+            }
+
+            var addedActeur = await _acteurRepository.AddActeurAsync(acteur);
+            return CreatedAtAction(nameof(GetActeurById), new { id = addedActeur.Id }, addedActeur);
         }
 
         // POST: api/Acteur/uploadProfilePicture/{id}
@@ -29,57 +62,64 @@ namespace Backend.Controllers
                 return BadRequest(new { message = "Aucun fichier sélectionné." });
             }
 
-            var acteur = await _context.Acteurs.FindAsync(id);
-            if (acteur == null)
+            try
+            {
+                // Pass the IFormFile directly to the repository
+                var uploadedFilePath = await _acteurRepository.UploadProfilePictureAsync(id, file);
+
+                return Ok(new { message = "Photo de profil mise à jour avec succès.", profilePictureUrl = uploadedFilePath });
+            }
+            catch (FileNotFoundException)
             {
                 return NotFound(new { message = "Acteur introuvable." });
             }
-
-            // Ensure directory exists
-            var uploadsDirectory = Path.Combine(_env.ContentRootPath, "uploads", "acteurs"); // Using ContentRootPath to avoid WebRootPath
-            if (!Directory.Exists(uploadsDirectory))
+            catch (Exception ex)
             {
-                Directory.CreateDirectory(uploadsDirectory);
+                return StatusCode(500, new { message = $"Erreur interne du serveur: {ex.Message}" });
             }
+        }
 
-            // Generate unique file name to avoid collisions
-            var fileExtension = Path.GetExtension(file.FileName);
-            var fileName = $"{Guid.NewGuid()}{fileExtension}";
-            var filePath = Path.Combine(uploadsDirectory, fileName);
-
-            // Save the file
-            using (var stream = new FileStream(filePath, FileMode.Create))
+        // PUT: api/Acteur/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateActeur(int id, [FromBody] Acteur acteur)
+        {
+            if (acteur == null || acteur.Id != id)
             {
-                await file.CopyToAsync(stream);
+                return BadRequest(new { message = "Les données de l'acteur sont invalides." });
             }
-
-            // Update the acteur's ProfilePicture path (relative to API root)
-            acteur.ProfilePicture = $"/uploads/acteurs/{fileName}";
-            acteur.UpdatedAt = DateTime.Now;
-
-            _context.Entry(acteur).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await _acteurRepository.UpdateActeurAsync(acteur);
+                return NoContent();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (FileNotFoundException)
             {
-                if (!ActeurExists(id))
-                {
-                    return NotFound(new { message = "Acteur introuvable." });
-                }
-                throw;
+                return NotFound(new { message = "Acteur introuvable." });
             }
-
-            return Ok(new { message = "Photo de profil mise à jour avec succès.", profilePictureUrl = acteur.ProfilePicture });
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Erreur interne du serveur: {ex.Message}" });
+            }
         }
 
-        // Other endpoints remain unchanged
-
-        private bool ActeurExists(int id)
+        // DELETE: api/Acteur/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteActeur(int id)
         {
-            return _context.Acteurs.Any(e => e.Id == id);
+            try
+            {
+                await _acteurRepository.DeleteActeurAsync(id);
+                return NoContent();
+            }
+            catch (FileNotFoundException)
+            {
+                return NotFound(new { message = "Acteur introuvable." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Erreur interne du serveur: {ex.Message}" });
+            }
         }
     }
 }

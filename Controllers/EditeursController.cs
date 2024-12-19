@@ -1,7 +1,9 @@
 using Backend.Models;
+using Backend.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Backend.Controllers
 {
@@ -10,47 +12,31 @@ namespace Backend.Controllers
     [Authorize] // You can further specify roles, e.g. [Authorize(Roles = "Admin")]
     public class EditeurController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IEditeurRepository _editeurRepository;
 
-        public EditeurController(ApplicationDbContext context)
+        public EditeurController(IEditeurRepository editeurRepository)
         {
-            _context = context;
+            _editeurRepository = editeurRepository;
         }
 
         // GET: api/Editeur
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Editeur>>> GetEditeurs()
         {
-            try
-            {
-                var editeurs = await _context.Editeurs.ToListAsync();
-                return Ok(editeurs);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+            var editeurs = await _editeurRepository.GetAllEditeursAsync();
+            return Ok(editeurs);
         }
 
         // GET: api/Editeur/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Editeur>> GetEditeur(int id)
         {
-            try
+            var editeur = await _editeurRepository.GetEditeurByIdAsync(id);
+            if (editeur == null)
             {
-                var editeur = await _context.Editeurs.FindAsync(id);
-
-                if (editeur == null)
-                {
-                    return NotFound($"Editeur with ID {id} not found.");
-                }
-
-                return Ok(editeur);
+                return NotFound($"Editeur with ID {id} not found.");
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Internal server error: {ex.Message}");
-            }
+            return Ok(editeur);
         }
 
         // PUT: api/Editeur/5
@@ -62,22 +48,9 @@ namespace Backend.Controllers
                 return BadRequest("ID mismatch.");
             }
 
-            _context.Entry(editeur).State = EntityState.Modified;
-
             try
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!EditeurExists(id))
-                {
-                    return NotFound($"Editeur with ID {id} not found.");
-                }
-                else
-                {
-                    return StatusCode(500, "Error updating the Editeur.");
-                }
+                await _editeurRepository.UpdateEditeurAsync(editeur);
             }
             catch (Exception ex)
             {
@@ -98,10 +71,8 @@ namespace Backend.Controllers
 
             try
             {
-                _context.Editeurs.Add(editeur);
-                await _context.SaveChangesAsync();
-
-                return CreatedAtAction(nameof(GetEditeur), new { id = editeur.EditeurID }, editeur);
+                var createdEditeur = await _editeurRepository.AddEditeurAsync(editeur);
+                return CreatedAtAction(nameof(GetEditeur), new { id = createdEditeur.EditeurID }, createdEditeur);
             }
             catch (Exception ex)
             {
@@ -115,26 +86,19 @@ namespace Backend.Controllers
         {
             try
             {
-                var editeur = await _context.Editeurs.FindAsync(id);
+                var editeur = await _editeurRepository.GetEditeurByIdAsync(id);
                 if (editeur == null)
                 {
                     return NotFound($"Editeur with ID {id} not found.");
                 }
 
-                _context.Editeurs.Remove(editeur);
-                await _context.SaveChangesAsync();
-
+                await _editeurRepository.DeleteEditeurAsync(id);
                 return Ok(editeur);
             }
             catch (Exception ex)
             {
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
-        }
-
-        private bool EditeurExists(int id)
-        {
-            return _context.Editeurs.Any(e => e.EditeurID == id);
         }
     }
 }

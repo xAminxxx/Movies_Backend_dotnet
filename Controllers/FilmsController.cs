@@ -1,7 +1,7 @@
 using Backend.Models;
+using Backend.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
 using System.IO;
 using System.Threading.Tasks;
@@ -13,144 +13,122 @@ namespace Backend.Controllers
     [Authorize]
     public class FilmController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IFilmRepository _filmRepository;
 
-        public FilmController(ApplicationDbContext context)
+        public FilmController(IFilmRepository filmRepository)
         {
-            _context = context;
+            _filmRepository = filmRepository;
         }
 
         // GET: api/Film
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Film>>> GetFilms()
+        public async Task<IActionResult> GetAllFilms()
         {
-            return await _context.Films.Include(f => f.Categories)
-                                       .Include(f => f.ActeurP)
-                                       .Include(f => f.Editeur)
-                                       .Include(f => f.Langues)
-                                       .Include(f => f.Realisateur)
-                                       .ToListAsync();
+            var films = await _filmRepository.GetAllFilmsAsync();
+            return Ok(films);
         }
 
-        // GET: api/Film/5
+        // GET: api/Film/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<Film>> GetFilm(int id)
+        public async Task<IActionResult> GetFilmById(int id)
         {
-            var film = await _context.Films.Include(f => f.Categories)
-                                           .Include(f => f.ActeurP)
-                                           .Include(f => f.Editeur)
-                                           .Include(f => f.Langues)
-                                           .Include(f => f.Realisateur)
-                                           .FirstOrDefaultAsync(f => f.FilmID == id);
-
+            var film = await _filmRepository.GetFilmByIdAsync(id);
             if (film == null)
             {
-                return NotFound();
+                return NotFound(new { message = $"Film with ID {id} not found." });
             }
-
-            return film;
-        }
-
-        // PUT: api/Film/5
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutFilm(int id, Film film)
-        {
-            if (id != film.FilmID)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(film).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!FilmExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
+            return Ok(film);
         }
 
         // POST: api/Film
         [HttpPost]
-        public async Task<ActionResult<Film>> PostFilm(Film film)
+        public async Task<IActionResult> AddFilm([FromBody] Film film)
         {
-            _context.Films.Add(film);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetFilm", new { id = film.FilmID }, film);
-        }
-
-        // DELETE: api/Film/5
-        [HttpDelete("{id}")]
-        public async Task<ActionResult<Film>> DeleteFilm(int id)
-        {
-            var film = await _context.Films.FindAsync(id);
             if (film == null)
             {
-                return NotFound();
+                return BadRequest(new { message = "Film data is invalid." });
             }
 
-            _context.Films.Remove(film);
-            await _context.SaveChangesAsync();
-
-            return film;
+            try
+            {
+                var addedFilm = await _filmRepository.AddFilmAsync(film);
+                return CreatedAtAction(nameof(GetFilmById), new { id = addedFilm.FilmID }, addedFilm);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Internal server error: {ex.Message}" });
+            }
         }
 
-        // Upload a film poster
-        [HttpPost("upload/{filmId}")]
-        public async Task<IActionResult> UploadFilmPoster(int filmId, IFormFile file)
+        // POST: api/Film/uploadPoster/{id}
+        [HttpPost("uploadPoster/{id}")]
+        public async Task<IActionResult> UploadFilmPoster(int id, IFormFile file)
         {
             if (file == null || file.Length == 0)
             {
-                return BadRequest("No file uploaded.");
+                return BadRequest(new { message = "No file selected." });
             }
 
-            var film = await _context.Films.FindAsync(filmId);
-            if (film == null)
+            try
             {
-                return NotFound("Film not found.");
+                // Pass the IFormFile directly to the repository
+                var uploadedFilePath = await _filmRepository.UploadFilmPosterAsync(id, file);
+
+                return Ok(new { message = "Film poster updated successfully.", posterUrl = uploadedFilePath });
             }
-
-            // Define the file path (save to wwwroot/uploads)
-            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "films", file.FileName);
-
-            // Create the directory if it doesn't exist
-            var directory = Path.GetDirectoryName(filePath);
-            if (!Directory.Exists(directory))
+            catch (FileNotFoundException)
             {
-                Directory.CreateDirectory(directory);
+                return NotFound(new { message = "Film not found." });
             }
-
-            // Save the file to disk
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            catch (Exception ex)
             {
-                await file.CopyToAsync(stream);
+                return StatusCode(500, new { message = $"Internal server error: {ex.Message}" });
             }
-
-            // Update the film's Poster path in the database
-            film.Poster = filePath.Replace(Directory.GetCurrentDirectory(), "").Replace("\\", "/");
-
-            // Save the changes to the database
-            _context.Films.Update(film);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { filePath = film.Poster });
         }
 
-        private bool FilmExists(int id)
+        // PUT: api/Film/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateFilm(int id, [FromBody] Film film)
         {
-            return _context.Films.Any(e => e.FilmID == id);
+            if (film == null || film.FilmID != id)
+            {
+                return BadRequest(new { message = "Film data is invalid." });
+            }
+
+            try
+            {
+                await _filmRepository.UpdateFilmAsync(film);
+                return NoContent();
+            }
+            catch (FileNotFoundException)
+            {
+                return NotFound(new { message = "Film not found." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Internal server error: {ex.Message}" });
+            }
+        }
+
+        // DELETE: api/Film/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteFilm(int id)
+        {
+            try
+            {
+                var film = await _filmRepository.GetFilmByIdAsync(id);
+                if (film == null)
+                {
+                    return NotFound(new { message = $"Film with ID {id} not found." });
+                }
+
+                await _filmRepository.DeleteFilmAsync(id);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = $"Internal server error: {ex.Message}" });
+            }
         }
     }
 }

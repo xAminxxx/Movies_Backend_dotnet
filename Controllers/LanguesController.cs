@@ -1,41 +1,42 @@
 using Backend.Models;
+using Backend.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize] // You can further specify roles, e.g. [Authorize(Roles = "Admin")]
     public class LangueController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ILangueRepository _langueRepository;
 
-        public LangueController(ApplicationDbContext context)
+        public LangueController(ILangueRepository langueRepository)
         {
-            _context = context;
+            _langueRepository = langueRepository;
         }
 
         // GET: api/Langue
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Langue>>> GetLangues()
         {
-            return await _context.Langues.ToListAsync();
+            var langues = await _langueRepository.GetAllLanguesAsync();
+            return Ok(langues);
         }
 
         // GET: api/Langue/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Langue>> GetLangue(int id)
         {
-            var langue = await _context.Langues.FindAsync(id);
-
+            var langue = await _langueRepository.GetLangueByIdAsync(id);
             if (langue == null)
             {
-                return NotFound();
+                return NotFound($"Langue with ID {id} not found.");
             }
-
-            return langue;
+            return Ok(langue);
         }
 
         // PUT: api/Langue/5
@@ -44,25 +45,16 @@ namespace Backend.Controllers
         {
             if (id != langue.LangueID)
             {
-                return BadRequest();
+                return BadRequest("ID mismatch.");
             }
-
-            _context.Entry(langue).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await _langueRepository.UpdateLangueAsync(langue);
             }
-            catch (DbUpdateConcurrencyException)
+            catch (Exception ex)
             {
-                if (!LangueExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
 
             return NoContent();
@@ -72,31 +64,41 @@ namespace Backend.Controllers
         [HttpPost]
         public async Task<ActionResult<Langue>> PostLangue(Langue langue)
         {
-            _context.Langues.Add(langue);
-            await _context.SaveChangesAsync();
+            if (langue == null)
+            {
+                return BadRequest("Langue data is null.");
+            }
 
-            return CreatedAtAction("GetLangue", new { id = langue.LangueID }, langue);
+            try
+            {
+                var createdLangue = await _langueRepository.AddLangueAsync(langue);
+                return CreatedAtAction(nameof(GetLangue), new { id = createdLangue.LangueID }, createdLangue);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
         // DELETE: api/Langue/5
         [HttpDelete("{id}")]
         public async Task<ActionResult<Langue>> DeleteLangue(int id)
         {
-            var langue = await _context.Langues.FindAsync(id);
-            if (langue == null)
+            try
             {
-                return NotFound();
+                var langue = await _langueRepository.GetLangueByIdAsync(id);
+                if (langue == null)
+                {
+                    return NotFound($"Langue with ID {id} not found.");
+                }
+
+                await _langueRepository.DeleteLangueAsync(id);
+                return Ok(langue);
             }
-
-            _context.Langues.Remove(langue);
-            await _context.SaveChangesAsync();
-
-            return langue;
-        }
-
-        private bool LangueExists(int id)
-        {
-            return _context.Langues.Any(e => e.LangueID == id);
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
     }
 }

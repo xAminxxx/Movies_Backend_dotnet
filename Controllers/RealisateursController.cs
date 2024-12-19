@@ -1,7 +1,9 @@
 using Backend.Models;
+using Backend.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Backend.Controllers
 {
@@ -10,32 +12,31 @@ namespace Backend.Controllers
     [Authorize]
     public class RealisateursController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IRealisateurRepository _realisateurRepository;
 
-        public RealisateursController(ApplicationDbContext context)
+        public RealisateursController(IRealisateurRepository realisateurRepository)
         {
-            _context = context;
+            _realisateurRepository = realisateurRepository;
         }
 
         // GET: api/Realisateurs
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Realisateurs>>> GetRealisateurs()
         {
-            return await _context.Realisateurs.ToListAsync();
+            var realisateurs = await _realisateurRepository.GetAllRealisateursAsync();
+            return Ok(realisateurs);
         }
 
         // GET: api/Realisateurs/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Realisateurs>> GetRealisateur(int id)
         {
-            var realisateur = await _context.Realisateurs.FindAsync(id);
-
+            var realisateur = await _realisateurRepository.GetRealisateurByIdAsync(id);
             if (realisateur == null)
             {
-                return NotFound();
+                return NotFound($"Realisateur with ID {id} not found.");
             }
-
-            return realisateur;
+            return Ok(realisateur);
         }
 
         // PUT: api/Realisateurs/5
@@ -44,25 +45,16 @@ namespace Backend.Controllers
         {
             if (id != realisateur.RealisateursID)
             {
-                return BadRequest();
+                return BadRequest("ID mismatch.");
             }
-
-            _context.Entry(realisateur).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await _realisateurRepository.UpdateRealisateurAsync(realisateur);
             }
-            catch (DbUpdateConcurrencyException)
+            catch (Exception ex)
             {
-                if (!RealisateurExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
 
             return NoContent();
@@ -72,31 +64,41 @@ namespace Backend.Controllers
         [HttpPost]
         public async Task<ActionResult<Realisateurs>> PostRealisateur(Realisateurs realisateur)
         {
-            _context.Realisateurs.Add(realisateur);
-            await _context.SaveChangesAsync();
+            if (realisateur == null)
+            {
+                return BadRequest("Realisateur data is null.");
+            }
 
-            return CreatedAtAction("GetRealisateur", new { id = realisateur.RealisateursID }, realisateur);
+            try
+            {
+                var createdRealisateur = await _realisateurRepository.AddRealisateurAsync(realisateur);
+                return CreatedAtAction(nameof(GetRealisateur), new { id = createdRealisateur.RealisateursID }, createdRealisateur);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
         // DELETE: api/Realisateurs/5
         [HttpDelete("{id}")]
         public async Task<ActionResult<Realisateurs>> DeleteRealisateur(int id)
         {
-            var realisateur = await _context.Realisateurs.FindAsync(id);
-            if (realisateur == null)
+            try
             {
-                return NotFound();
+                var realisateur = await _realisateurRepository.GetRealisateurByIdAsync(id);
+                if (realisateur == null)
+                {
+                    return NotFound($"Realisateur with ID {id} not found.");
+                }
+
+                await _realisateurRepository.DeleteRealisateurAsync(id);
+                return Ok(realisateur);
             }
-
-            _context.Realisateurs.Remove(realisateur);
-            await _context.SaveChangesAsync();
-
-            return realisateur;
-        }
-
-        private bool RealisateurExists(int id)
-        {
-            return _context.Realisateurs.Any(e => e.RealisateursID == id);
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
     }
 }
